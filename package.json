@@ -20,11 +20,21 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "axios": "^1.10.0",
+    "cheerio": "^1.0.0-rc.12",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "crawl4ai": "^1.0.1",
+    "exceljs": "^4.4.0",
+    "fs-extra": "^11.3.0",
+    "puppeteer": "^24.10.2",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "url": "^0.11.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -34,9 +44,12 @@
     "@nestjs/testing": "^11.0.1",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.7",
+    "@types/exceljs": "^0.5.3",
     "@types/express": "^5.0.0",
+    "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.7",
+    "@types/puppeteer": "^5.4.7",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

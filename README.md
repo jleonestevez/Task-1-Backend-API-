@@ -1,98 +1,165 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Task-1-Backend-API - Proyecto de Ejemplo de Web Scraping
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Descripción
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Este es un proyecto de ejemplo desarrollado con **JetBrains AI Assistant (Air IDE)** que demuestra las capacidades de web scraping y crawling automatizado. El proyecto implementa una API backend robusta para la extracción automatizada de contenido web, con enfoque especial en la descarga de imágenes de capítulos de manga.
 
-## Description
+## Características del Proyecto
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### Tecnologías Utilizadas
+- **Framework**: NestJS (Node.js)
+- **Web Scraping**: Puppeteer, Cheerio
+- **HTTP Client**: Axios
+- **Validación**: Class-validator, Class-transformer
+- **Documentos**: ExcelJS
+- **Utilidades**: fs-extra, crawl4ai
 
-## Project setup
+### Funcionalidades Principales
 
-```bash
-$ npm install
+1. **Web Scraping Básico**
+   - Extracción de contenido HTML con selectores CSS
+   - Procesamiento de datos estructurados
+   - Manejo de errores y timeouts
+
+2. **Crawling Avanzado**
+   - Navegación automatizada por sitios web
+   - Control de profundidad de crawling
+   - Filtrado por frases objetivo
+   - Límite de páginas procesadas
+
+3. **Automatización con Puppeteer**
+   - Renderizado completo de páginas JavaScript
+   - Detección automática de elementos dinámicos
+   - Navegación por dropdowns y menús
+   - Descarga masiva de imágenes
+
+## Objetivo del Proyecto
+
+Este proyecto sirve como **demostración técnica** de las capacidades modernas de web scraping, mostrando:
+
+- Implementación de APIs RESTful para scraping
+- Manejo de contenido dinámico con Puppeteer
+- Procesamiento automatizado de sitios web complejos
+- Descarga y organización de recursos multimedia
+
+> **Nota**: Este es un proyecto de ejemplo generado con el **IDE Air de JetBrains**, diseñado para fines educativos y de demostración técnica.
+
+## Ejemplo de Uso: Crawler para Manga
+
+El sistema incluye un crawler especializado para descargar capítulos (imágenes) de manga de sitios como **anzmanga** o similares.
+
+### Configuración de Ejemplo
+
+```json
+{
+  "url": "https://www.anzmanga25.com/manga/one-piece",
+  "maxDepth": 3,
+  "targetPhrases": ["one piece"],
+  "maxFilteredPages": 5
+}
 ```
 
-## Compile and run the project
+### Endpoints Disponibles
+
+#### POST `/scraper/crawl`
+Inicia el proceso de crawling con los parámetros especificados:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+curl -X POST http://localhost:3000/scraper/crawl \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://www.anzmanga25.com/manga/one-piece",
+    "maxDepth": 3,
+    "targetPhrases": ["one piece"],
+    "maxFilteredPages": 5
+  }'
 ```
 
-## Run tests
+#### GET `/scraper/quick-scrape`
+Scraping rápido de una URL específica:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+curl "http://localhost:3000/scraper/quick-scrape?url=https://example.com&selector=.content"
 ```
 
-## Deployment
+### Proceso de Descarga
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+El crawler realiza las siguientes operaciones:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. **Análisis Inicial**: Examina la estructura del sitio web
+2. **Detección de Capítulos**: Identifica enlaces a capítulos individuales
+3. **Navegación Automatizada**: Accede a cada capítulo secuencialmente
+4. **Extracción de Imágenes**: Descarga todas las imágenes del capítulo
+5. **Organización**: Estructura los archivos por capítulo y página
+
+### Ubicación de Archivos Descargados
+
+Las imágenes descargadas se almacenan en:
+
+```
+/output/images_[timestamp]/
+├── page_1_rel_1_img_1_[timestamp].jpg
+├── page_1_rel_1_img_2_[timestamp].jpg
+├── page_1_rel_2_img_1_[timestamp].jpg
+└── ...
+```
+
+**Estructura de Nomenclatura:**
+- `page_X`: Número de página procesada
+- `rel_Y`: Número de relación/capítulo
+- `img_Z`: Número de imagen dentro del capítulo
+- `[timestamp]`: Marca temporal de descarga
+
+## Instalación y Uso
+
+### Requisitos Previos
+- Node.js 18+
+- npm o yarn
+
+### Instalación
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Clonar el repositorio
+git clone [repository-url]
+
+# Instalar dependencias
+npm install
+
+# Iniciar en modo desarrollo
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Scripts Disponibles
 
-## Resources
+```bash
+npm run build          # Compilar proyecto
+npm run start         # Iniciar en producción
+npm run start:dev     # Iniciar en desarrollo
+npm run test          # Ejecutar tests
+npm run lint          # Linter de código
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Consideraciones Importantes
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Aspectos Técnicos
+- **Viewport Configurado**: 1920x1080 para simular navegador de escritorio
+- **Timeouts Inteligentes**: Espera a que el contenido se cargue completamente
+- **Manejo de Errores**: Recuperación automática de fallos de red
+- **Límites de Seguridad**: Control de profundidad y número de páginas
 
-## Support
+### Uso Responsable
+- Respetar robots.txt de los sitios web
+- Implementar delays entre requests
+- No sobrecargar los servidores objetivo
+- Cumplir con términos de servicio
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Notas Legales
+Este proyecto es únicamente para fines educativos y de demostración. Los usuarios son responsables de cumplir con las leyes aplicables y términos de servicio de los sitios web que scraped.
 
-## Stay in touch
+## Contribución
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Este proyecto fue generado como ejemplo usando **JetBrains AI Assistant (Air IDE)** y está abierto a contribuciones para mejoras y nuevas funcionalidades.
 
-## License
+## Licencia
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED - Proyecto de ejemplo para demostración técnica.
