@@ -74,22 +74,39 @@ export class ScraperService {
    * @param maxFilteredPages Número máximo de páginas filtradas a procesar
    * @returns Un objeto con el estado inicial y el nombre del archivo Excel generado
    */
-  async crawlSite(url: string, maxDepth: number = 1, targetPhrases?: string[], maxFilteredPages?: number): Promise<any> {
+  async crawlSite(
+    url: string,
+    maxDepth: number = 1,
+    targetPhrases?: string[],
+    maxFilteredPages?: number,
+  ): Promise<any> {
     // Responder inmediatamente que el proceso está en curso
     const timestamp = Date.now();
     const excelFilename = `crawl_tree_${timestamp}.xlsx`;
     const excelPath = path.join(__dirname, '../../output', excelFilename);
-    const imagesDir = path.join(__dirname, '../../output', `images_${timestamp}`);
+    const imagesDir = path.join(
+      __dirname,
+      '../../output',
+      `images_${timestamp}`,
+    );
 
     // Crear directorio para imágenes
     await fs.ensureDir(imagesDir);
 
     // Lanzar el proceso de crawling en segundo plano
-    this.startCrawlingAndSaveExcel(url, maxDepth, excelPath, imagesDir, targetPhrases, maxFilteredPages);
+    this.startCrawlingAndSaveExcel(
+      url,
+      maxDepth,
+      excelPath,
+      imagesDir,
+      targetPhrases,
+      maxFilteredPages,
+    );
 
     return {
       status: 'en_curso',
-      message: 'El crawling ha comenzado. El resultado estará disponible en un archivo Excel con estructura de árbol.',
+      message:
+        'El crawling ha comenzado. El resultado estará disponible en un archivo Excel con estructura de árbol.',
       output: `/output/${excelFilename}`,
       imagesDirectory: `/output/images_${timestamp}`,
       targetPhrases: targetPhrases || [],
@@ -103,7 +120,9 @@ export class ScraperService {
   private getDirectoryNameFromUrl(url: string): string {
     try {
       const urlObj = new URL(url);
-      const pathSegments = urlObj.pathname.split('/').filter(segment => segment.length > 0);
+      const pathSegments = urlObj.pathname
+        .split('/')
+        .filter((segment) => segment.length > 0);
 
       if (pathSegments.length === 0) {
         return 'root';
@@ -124,7 +143,7 @@ export class ScraperService {
     this.logger.log('Esperando a que la página se renderice completamente...');
 
     // Esperar adicional para contenido dinámico
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Verificar si hay más contenido cargándose
     let previousHeight = 0;
@@ -132,7 +151,7 @@ export class ScraperService {
 
     while (currentHeight > previousHeight) {
       previousHeight = currentHeight;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       currentHeight = await page.evaluate(() => document.body.scrollHeight);
     }
 
@@ -147,14 +166,18 @@ export class ScraperService {
 
     try {
       // Buscar dropdown-menu con clase open
-      const dropdownElements = await page.$$('.dropdown-menu.open, .dropdown-menu[class*="open"]');
+      const dropdownElements = await page.$$(
+        '.dropdown-menu.open, .dropdown-menu[class*="open"]',
+      );
 
       if (dropdownElements.length === 0) {
         this.logger.log('No se encontró dropdown-menu open');
         return [];
       }
 
-      this.logger.log(`Encontrados ${dropdownElements.length} dropdown-menu open`);
+      this.logger.log(
+        `Encontrados ${dropdownElements.length} dropdown-menu open`,
+      );
 
       const allRels: string[] = [];
 
@@ -163,7 +186,7 @@ export class ScraperService {
         const relElements = await dropdown.$$('[rel]');
 
         for (const relElement of relElements) {
-          const rel = await relElement.evaluate(el => el.getAttribute('rel'));
+          const rel = await relElement.evaluate((el) => el.getAttribute('rel'));
           if (rel && rel.trim()) {
             allRels.push(rel.trim());
           }
@@ -172,11 +195,13 @@ export class ScraperService {
 
       // Eliminar duplicados, ordenar y convertir a índices numéricos empezando desde 1
       const uniqueRels = [...new Set(allRels)].sort();
-      
+
       // Convertir a valores numéricos ordenados empezando desde 1
       const orderedRels = uniqueRels.map((_, index) => (index + 1).toString());
-      
-      this.logger.log(`Encontrados ${uniqueRels.length} elementos rel únicos, convertidos a: ${orderedRels.join(', ')}`);
+
+      this.logger.log(
+        `Encontrados ${uniqueRels.length} elementos rel únicos, convertidos a: ${orderedRels.join(', ')}`,
+      );
       this.logger.log(`Rels originales: ${uniqueRels.join(', ')}`);
 
       return orderedRels;
@@ -194,7 +219,7 @@ export class ScraperService {
     rel: string,
     pageImagesDir: string,
     pageIndex: number,
-    relIndex: number
+    relIndex: number,
   ): Promise<string[]> {
     const downloadedImages: string[] = [];
     let browser: puppeteer.Browser | null = null;
@@ -206,43 +231,63 @@ export class ScraperService {
 
       browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+        ],
       });
 
       const page = await browser.newPage();
       await page.setViewport({ width: 1920, height: 1080 });
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      );
 
       // Navegar a la página con rel
-      await page.goto(urlWithRel, { waitUntil: 'networkidle0', timeout: 30000 });
+      await page.goto(urlWithRel, {
+        waitUntil: 'networkidle0',
+        timeout: 30000,
+      });
 
       // Esperar a que se renderice
       await this.waitForPageToRender(page);
 
       // Buscar imágenes con clase img-responsive
       const responsiveImages = await page.$$('.img-responsive');
-      this.logger.log(`Encontradas ${responsiveImages.length} imágenes img-responsive en ${urlWithRel}`);
+      this.logger.log(
+        `Encontradas ${responsiveImages.length} imágenes img-responsive en ${urlWithRel}`,
+      );
 
       for (let i = 0; i < responsiveImages.length; i++) {
         const img = responsiveImages[i];
 
         try {
           // Obtener src de la imagen
-          const src = await img.evaluate(el => (el as HTMLImageElement).src);
-          const alt = await img.evaluate(el => (el as HTMLImageElement).alt || '');
+          const src = await img.evaluate((el) => (el as HTMLImageElement).src);
+          const alt = await img.evaluate(
+            (el) => (el as HTMLImageElement).alt || '',
+          );
 
           if (src && src.startsWith('http')) {
             // Descargar la imagen
-            const downloadedName = await this.downloadImageFromRel(src, pageImagesDir, pageIndex, relIndex, i);
+            const downloadedName = await this.downloadImageFromRel(
+              src,
+              pageImagesDir,
+              pageIndex,
+              relIndex,
+              i,
+            );
             if (downloadedName) {
               downloadedImages.push(downloadedName);
             }
           }
         } catch (error) {
-          this.logger.error(`Error procesando imagen ${i} en rel ${rel}: ${error.message}`);
+          this.logger.error(
+            `Error procesando imagen ${i} en rel ${rel}: ${error.message}`,
+          );
         }
       }
-
     } catch (error) {
       this.logger.error(`Error navegando a rel ${rel}: ${error.message}`);
     } finally {
@@ -262,7 +307,7 @@ export class ScraperService {
     pageImagesDir: string,
     pageIndex: number,
     relIndex: number,
-    imgIndex: number
+    imgIndex: number,
   ): Promise<string | null> {
     try {
       // Obtener extensión del archivo
@@ -279,9 +324,10 @@ export class ScraperService {
           responseType: 'arraybuffer',
           timeout: 10000,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        })
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        }),
       );
 
       // Guardar imagen
@@ -290,7 +336,9 @@ export class ScraperService {
 
       return imageName;
     } catch (error) {
-      this.logger.error(`Error descargando imagen rel ${imageUrl}: ${error.message}`);
+      this.logger.error(
+        `Error descargando imagen rel ${imageUrl}: ${error.message}`,
+      );
       return null;
     }
   }
@@ -298,7 +346,11 @@ export class ScraperService {
   /**
    * Procesa dropdown-menu y navega por todos los rels
    */
-  private async processDropdownRels(url: string, imagesDir: string, pageIndex: number): Promise<{ downloadedImages: string[], relsProcessed: number }> {
+  private async processDropdownRels(
+    url: string,
+    imagesDir: string,
+    pageIndex: number,
+  ): Promise<{ downloadedImages: string[]; relsProcessed: number }> {
     let browser: puppeteer.Browser | null = null;
     const allDownloadedImages: string[] = [];
     let relsProcessed = 0;
@@ -312,12 +364,18 @@ export class ScraperService {
       this.logger.log(`Iniciando procesamiento de dropdown para: ${url}`);
       browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+        ],
       });
 
       const page = await browser.newPage();
       await page.setViewport({ width: 1920, height: 1080 });
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      );
 
       // Navegar a la página
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
@@ -329,7 +387,9 @@ export class ScraperService {
       const rels = await this.findDropdownRels(page);
 
       if (rels.length === 0) {
-        this.logger.log('No se encontraron elementos rel en dropdown-menu open');
+        this.logger.log(
+          'No se encontraron elementos rel en dropdown-menu open',
+        );
         return { downloadedImages: [], relsProcessed: 0 };
       }
 
@@ -338,16 +398,23 @@ export class ScraperService {
         const rel = rels[i];
         this.logger.log(`Procesando rel ${i + 1}/${rels.length}: ${rel}`);
 
-        const relImages = await this.navigateToRelAndDownloadImages(url, rel, pageImagesDir, pageIndex, i);
+        const relImages = await this.navigateToRelAndDownloadImages(
+          url,
+          rel,
+          pageImagesDir,
+          pageIndex,
+          i,
+        );
         allDownloadedImages.push(...relImages);
         relsProcessed++;
 
         // Delay reducido entre navegaciones
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-
     } catch (error) {
-      this.logger.error(`Error procesando dropdown rels en ${url}: ${error.message}`);
+      this.logger.error(
+        `Error procesando dropdown rels en ${url}: ${error.message}`,
+      );
     } finally {
       if (browser) {
         await browser.close();
@@ -360,7 +427,15 @@ export class ScraperService {
   /**
    * Espera a que aparezcan elementos ch-images y los procesa con Puppeteer
    */
-  private async waitForChImagesAndDownload(url: string, imagesDir: string, pageIndex: number): Promise<{ downloadedImages: string[], chImagesCount: number, dropdownRels: number }> {
+  private async waitForChImagesAndDownload(
+    url: string,
+    imagesDir: string,
+    pageIndex: number,
+  ): Promise<{
+    downloadedImages: string[];
+    chImagesCount: number;
+    dropdownRels: number;
+  }> {
     let browser: puppeteer.Browser | null = null;
     const downloadedImages: string[] = [];
     let chImagesCount = 0;
@@ -375,14 +450,20 @@ export class ScraperService {
       this.logger.log(`Iniciando Puppeteer para: ${url}`);
       browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+        ],
       });
 
       const page = await browser.newPage();
 
       // Configurar viewport y user agent
       await page.setViewport({ width: 1920, height: 1080 });
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      );
 
       // Navegar a la página
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
@@ -396,13 +477,20 @@ export class ScraperService {
         await this.waitForPageToRender(page);
 
         // Contar elementos ch-images
-        chImagesCount = await page.$$eval('ch-images', elements => elements.length);
-        this.logger.log(`Total de elementos ch-images encontrados: ${chImagesCount}`);
-
-
+        chImagesCount = await page.$$eval(
+          'ch-images',
+          (elements) => elements.length,
+        );
+        this.logger.log(
+          `Total de elementos ch-images encontrados: ${chImagesCount}`,
+        );
 
         // Procesar dropdown-menu y rels en lugar de clicks ppp
-        const dropdownResult = await this.processDropdownRels(url, imagesDir, pageIndex);
+        const dropdownResult = await this.processDropdownRels(
+          url,
+          imagesDir,
+          pageIndex,
+        );
         downloadedImages.push(...dropdownResult.downloadedImages);
         dropdownRels = dropdownResult.relsProcessed;
 
@@ -420,30 +508,42 @@ export class ScraperService {
               const img = images[j];
 
               // Obtener src de la imagen
-              const src = await img.evaluate(el => (el as HTMLImageElement).src);
-              const alt = await img.evaluate(el => (el as HTMLImageElement).alt || '');    
-
+              const src = await img.evaluate((el) => el.src);
+              const alt = await img.evaluate((el) => el.alt || '');
 
               if (src && src.startsWith('http')) {
                 // Descargar la imagen
-                const downloadedName = await this.downloadImageFromChImages(src, pageImagesDir, pageIndex, i, j);
+                const downloadedName = await this.downloadImageFromChImages(
+                  src,
+                  pageImagesDir,
+                  pageIndex,
+                  i,
+                  j,
+                );
                 if (downloadedName) {
                   downloadedImages.push(downloadedName);
                 }
               }
             }
           } catch (error) {
-            this.logger.error(`Error procesando ch-images elemento ${i}: ${error.message}`);
+            this.logger.error(
+              `Error procesando ch-images elemento ${i}: ${error.message}`,
+            );
           }
         }
-
       } catch (timeoutError) {
-        this.logger.log(`No se encontraron elementos ch-images en: ${url} (timeout)`);
+        this.logger.log(
+          `No se encontraron elementos ch-images en: ${url} (timeout)`,
+        );
 
         // Si no hay ch-images, procesar dropdown de todas formas
 
         // Procesar dropdown-menu y rels
-        const dropdownResult = await this.processDropdownRels(url, imagesDir, pageIndex);
+        const dropdownResult = await this.processDropdownRels(
+          url,
+          imagesDir,
+          pageIndex,
+        );
         downloadedImages.push(...dropdownResult.downloadedImages);
         dropdownRels = dropdownResult.relsProcessed;
 
@@ -453,17 +553,22 @@ export class ScraperService {
 
         for (let i = 0; i < limitedImages.length; i++) {
           const img = limitedImages[i];
-          const src = await img.evaluate(el => el.src);
+          const src = await img.evaluate((el) => el.src);
 
           if (src && src.startsWith('http')) {
-            const downloadedName = await this.downloadImageFromChImages(src, pageImagesDir, pageIndex, 0, i);
+            const downloadedName = await this.downloadImageFromChImages(
+              src,
+              pageImagesDir,
+              pageIndex,
+              0,
+              i,
+            );
             if (downloadedName) {
               downloadedImages.push(downloadedName);
             }
           }
         }
       }
-
     } catch (error) {
       this.logger.error(`Error con Puppeteer en ${url}: ${error.message}`);
     } finally {
@@ -478,7 +583,13 @@ export class ScraperService {
   /**
    * Descarga una imagen desde ch-images
    */
-  private async downloadImageFromChImages(imageUrl: string, pageImagesDir: string, pageIndex: number, chIndex: number, imgIndex: number): Promise<string | null> {
+  private async downloadImageFromChImages(
+    imageUrl: string,
+    pageImagesDir: string,
+    pageIndex: number,
+    chIndex: number,
+    imgIndex: number,
+  ): Promise<string | null> {
     try {
       // Obtener extensión del archivo
       const urlPath = new URL(imageUrl).pathname;
@@ -494,9 +605,10 @@ export class ScraperService {
           responseType: 'arraybuffer',
           timeout: 10000,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        })
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        }),
       );
 
       // Guardar imagen
@@ -505,7 +617,9 @@ export class ScraperService {
 
       return imageName;
     } catch (error) {
-      this.logger.error(`Error descargando imagen ch-images ${imageUrl}: ${error.message}`);
+      this.logger.error(
+        `Error descargando imagen ch-images ${imageUrl}: ${error.message}`,
+      );
       return null;
     }
   }
@@ -513,7 +627,12 @@ export class ScraperService {
   /**
    * Descarga una imagen desde una URL (método original para imágenes normales)
    */
-  private async downloadImage(imageUrl: string, baseUrl: string, imagesDir: string, pageIndex: number): Promise<string | null> {
+  private async downloadImage(
+    imageUrl: string,
+    baseUrl: string,
+    imagesDir: string,
+    pageIndex: number,
+  ): Promise<string | null> {
     try {
       // Resolver URL relativa
       const absoluteUrl = new URL(imageUrl, baseUrl).href;
@@ -537,9 +656,10 @@ export class ScraperService {
           responseType: 'arraybuffer',
           timeout: 10000,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        })
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        }),
       );
 
       // Guardar imagen
@@ -548,7 +668,9 @@ export class ScraperService {
 
       return imageName;
     } catch (error) {
-      this.logger.error(`Error descargando imagen ${imageUrl}: ${error.message}`);
+      this.logger.error(
+        `Error descargando imagen ${imageUrl}: ${error.message}`,
+      );
       return null;
     }
   }
@@ -586,7 +708,7 @@ export class ScraperService {
           listItems.push({
             text: text,
             links: links,
-            hasSublist: $item.find('ul, ol').length > 0
+            hasSublist: $item.find('ul, ol').length > 0,
           });
         }
       });
@@ -596,7 +718,7 @@ export class ScraperService {
           type: listElement.tagName,
           itemCount: listItems.length,
           items: listItems.slice(0, 10), // Limitar a 10 items por lista
-          hasNestedLists: $list.find('ul, ol').length > 0
+          hasNestedLists: $list.find('ul, ol').length > 0,
         });
       }
     });
@@ -612,7 +734,7 @@ export class ScraperService {
 
         definitions.push({
           term: $dt.text().trim(),
-          definition: $dd.text().trim()
+          definition: $dd.text().trim(),
         });
       });
 
@@ -620,7 +742,7 @@ export class ScraperService {
         lists.push({
           type: 'dl',
           itemCount: definitions.length,
-          items: definitions.slice(0, 10)
+          items: definitions.slice(0, 10),
         });
       }
     });
@@ -631,23 +753,29 @@ export class ScraperService {
   /**
    * Extrae información detallada de una página web
    */
-  private async extractDetailedInfo(url: string, imagesDir: string, pageIndex: number): Promise<any> {
+  private async extractDetailedInfo(
+    url: string,
+    imagesDir: string,
+    pageIndex: number,
+  ): Promise<any> {
     try {
       const userAgents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
       ];
 
-      const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+      const userAgent =
+        userAgents[Math.floor(Math.random() * userAgents.length)];
       const response = await firstValueFrom(
         this.httpService.get(url, {
           headers: {
             'User-Agent': userAgent,
             'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            Accept:
+              'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           },
           timeout: 10000,
-        })
+        }),
       );
 
       const html = response.data;
@@ -657,7 +785,7 @@ export class ScraperService {
       const headings = {
         h1: [] as string[],
         h2: [] as string[],
-        h3: [] as string[]
+        h3: [] as string[],
       };
 
       $('h1').each((i, el) => {
@@ -671,8 +799,12 @@ export class ScraperService {
       });
 
       // Usar Puppeteer para ch-images con scroll y procesamiento de dropdown rels
-      const chImagesResult = await this.waitForChImagesAndDownload(url, imagesDir, pageIndex);
-      let downloadedImages = chImagesResult.downloadedImages;
+      const chImagesResult = await this.waitForChImagesAndDownload(
+        url,
+        imagesDir,
+        pageIndex,
+      );
+      const downloadedImages = chImagesResult.downloadedImages;
       const chImagesCount = chImagesResult.chImagesCount;
       const dropdownRels = chImagesResult.dropdownRels;
 
@@ -692,7 +824,12 @@ export class ScraperService {
             const imageInfo: ImageInfo = { src, alt: alt || '' };
 
             // Intentar descargar la imagen
-            const downloadedName = await this.downloadImage(src, url, imagesDir, pageIndex);
+            const downloadedName = await this.downloadImage(
+              src,
+              url,
+              imagesDir,
+              pageIndex,
+            );
             if (downloadedName) {
               imageInfo.downloaded = downloadedName;
               downloadedImages.push(downloadedName);
@@ -727,10 +864,12 @@ export class ScraperService {
         listCount: detectedLists.length,
         chImagesCount: chImagesCount,
         dropdownRels: dropdownRels,
-        pageDirectory: this.getDirectoryNameFromUrl(url)
+        pageDirectory: this.getDirectoryNameFromUrl(url),
       };
     } catch (error) {
-      this.logger.error(`Error extracting detailed info from ${url}: ${error.message}`);
+      this.logger.error(
+        `Error extracting detailed info from ${url}: ${error.message}`,
+      );
       return {
         title: 'Error al extraer información',
         error: error.message,
@@ -738,7 +877,7 @@ export class ScraperService {
         detectedLists: [],
         chImagesCount: 0,
         dropdownRels: 0,
-        pageDirectory: this.getDirectoryNameFromUrl(url)
+        pageDirectory: this.getDirectoryNameFromUrl(url),
       };
     }
   }
@@ -749,7 +888,7 @@ export class ScraperService {
   private extractLinksFromLists(detectedLists: any[]): string[] {
     const listLinks: string[] = [];
 
-    detectedLists.forEach(list => {
+    detectedLists.forEach((list) => {
       list.items.forEach((item: any) => {
         if (item.links && item.links.length > 0) {
           listLinks.push(...item.links);
@@ -763,13 +902,20 @@ export class ScraperService {
   /**
    * Proceso real de crawling y guardado en Excel, ejecutado en segundo plano
    */
-  private async startCrawlingAndSaveExcel(url: string, maxDepth: number, excelPath: string, imagesDir: string, targetPhrases?: string[], maxFilteredPages?: number) {
+  private async startCrawlingAndSaveExcel(
+    url: string,
+    maxDepth: number,
+    excelPath: string,
+    imagesDir: string,
+    targetPhrases?: string[],
+    maxFilteredPages?: number,
+  ) {
     const visited = new Set<string>();
     const treeNodes = new Map<string, TreeNode>();
     let filteredPagesProcessed = 0;
     let pageIndex = 0;
 
-    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
     /**
      * Verifica si un enlace contiene alguna de las frases objetivo
@@ -780,8 +926,8 @@ export class ScraperService {
       }
 
       const searchText = `${link} ${linkText}`.toLowerCase();
-      return targetPhrases.some(phrase =>
-        searchText.includes(phrase.toLowerCase())
+      return targetPhrases.some((phrase) =>
+        searchText.includes(phrase.toLowerCase()),
       );
     };
 
@@ -789,28 +935,43 @@ export class ScraperService {
      * Verifica si se ha alcanzado el límite de páginas filtradas
      */
     const hasReachedFilteredPagesLimit = (): boolean => {
-      return maxFilteredPages !== undefined && filteredPagesProcessed >= maxFilteredPages;
+      return (
+        maxFilteredPages !== undefined &&
+        filteredPagesProcessed >= maxFilteredPages
+      );
     };
 
-    const crawl = async (currentUrl: string, depth: number, parentUrl?: string) => {
-      if (depth > maxDepth || visited.has(currentUrl) || hasReachedFilteredPagesLimit()) {
+    const crawl = async (
+      currentUrl: string,
+      depth: number,
+      parentUrl?: string,
+    ) => {
+      if (
+        depth > maxDepth ||
+        visited.has(currentUrl) ||
+        hasReachedFilteredPagesLimit()
+      ) {
         return;
       }
 
       visited.add(currentUrl);
       pageIndex++;
-      this.logger.log(`Crawling: ${currentUrl} (depth: ${depth}, page: ${pageIndex})`);
+      this.logger.log(
+        `Crawling: ${currentUrl} (depth: ${depth}, page: ${pageIndex})`,
+      );
 
       try {
         const response = await firstValueFrom(
           this.httpService.get(currentUrl, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
               'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+              Accept:
+                'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             },
             timeout: 10000,
-          })
+          }),
         );
         const html = response.data;
         const $ = cheerio.load(html);
@@ -828,12 +989,16 @@ export class ScraperService {
           downloadedImages: [],
           detectedLists: [],
           chImagesFound: 0,
-          dropdownRelsProcessed: 0
+          dropdownRelsProcessed: 0,
         };
 
         // Extraer información detallada de la página
         this.logger.log(`Extrayendo información detallada de: ${currentUrl}`);
-        node.scrapedData = await this.extractDetailedInfo(currentUrl, imagesDir, pageIndex);
+        node.scrapedData = await this.extractDetailedInfo(
+          currentUrl,
+          imagesDir,
+          pageIndex,
+        );
         node.downloadedImages = node.scrapedData.downloadedImages || [];
         node.detectedLists = node.scrapedData.detectedLists || [];
         node.chImagesFound = node.scrapedData.chImagesCount || 0;
@@ -854,12 +1019,14 @@ export class ScraperService {
 
         // Extraer enlaces adicionales de listados detectados
         const listLinks = this.extractLinksFromLists(node.detectedLists || []);
-        const filteredListLinks = listLinks.filter(link => {
+        const filteredListLinks = listLinks.filter((link) => {
           return containsTargetPhrase(link, '');
         });
 
         // Combinar todos los enlaces filtrados
-        const allFilteredLinks = [...new Set([...filteredLinks, ...filteredListLinks])];
+        const allFilteredLinks = [
+          ...new Set([...filteredLinks, ...filteredListLinks]),
+        ];
 
         // Agregar nodo al mapa
         treeNodes.set(currentUrl, node);
@@ -869,21 +1036,37 @@ export class ScraperService {
           treeNodes.get(parentUrl)!.children.push(node);
         }
 
-        if (allFilteredLinks.length > 0 || (!targetPhrases || targetPhrases.length === 0)) {
+        if (
+          allFilteredLinks.length > 0 ||
+          !targetPhrases ||
+          targetPhrases.length === 0
+        ) {
           filteredPagesProcessed++;
         }
 
-        this.logger.log(`Enlaces filtrados encontrados: ${allFilteredLinks.length}`);
-        this.logger.log(`Imágenes descargadas: ${node.downloadedImages.length}`);
-        this.logger.log(`Elementos ch-images encontrados: ${node.chImagesFound}`);
-        this.logger.log(`Dropdown rels procesados: ${node.dropdownRelsProcessed}`);
+        this.logger.log(
+          `Enlaces filtrados encontrados: ${allFilteredLinks.length}`,
+        );
+        this.logger.log(
+          `Imágenes descargadas: ${node.downloadedImages.length}`,
+        );
+        this.logger.log(
+          `Elementos ch-images encontrados: ${node.chImagesFound}`,
+        );
+        this.logger.log(
+          `Dropdown rels procesados: ${node.dropdownRelsProcessed}`,
+        );
 
         if (maxFilteredPages) {
-          this.logger.log(`Páginas filtradas procesadas: ${filteredPagesProcessed}/${maxFilteredPages}`);
+          this.logger.log(
+            `Páginas filtradas procesadas: ${filteredPagesProcessed}/${maxFilteredPages}`,
+          );
         }
 
         if (hasReachedFilteredPagesLimit()) {
-          this.logger.log(`Se alcanzó el límite de páginas filtradas (${maxFilteredPages}). Deteniendo crawling.`);
+          this.logger.log(
+            `Se alcanzó el límite de páginas filtradas (${maxFilteredPages}). Deteniendo crawling.`,
+          );
           return;
         }
 
@@ -909,7 +1092,7 @@ export class ScraperService {
           detectedLists: [],
           chImagesFound: 0,
           dropdownRelsProcessed: 0,
-          scrapedData: { error: error.message }
+          scrapedData: { error: error.message },
         };
         treeNodes.set(currentUrl, errorNode);
       }
@@ -922,13 +1105,19 @@ export class ScraperService {
 
     this.logger.log(`Archivo Excel generado: ${excelPath}`);
     this.logger.log(`Directorio de imágenes: ${imagesDir}`);
-    this.logger.log(`Crawling completado. Páginas visitadas: ${visited.size}, Páginas filtradas: ${filteredPagesProcessed}`);
+    this.logger.log(
+      `Crawling completado. Páginas visitadas: ${visited.size}, Páginas filtradas: ${filteredPagesProcessed}`,
+    );
   }
 
   /**
    * Genera el archivo Excel con estructura de árbol y datos detallados
    */
-  private async generateExcelFile(excelPath: string, treeNodes: Map<string, TreeNode>, rootUrl: string) {
+  private async generateExcelFile(
+    excelPath: string,
+    treeNodes: Map<string, TreeNode>,
+    rootUrl: string,
+  ) {
     const workbook = new ExcelJS.Workbook();
 
     // Pestaña 1: Estructura de árbol
@@ -944,7 +1133,7 @@ export class ScraperService {
       { header: 'CH-Images Encontrados', key: 'chImages', width: 20 },
       { header: 'Dropdown Rels Procesados', key: 'dropdownRels', width: 25 },
       { header: 'Listados Detectados', key: 'lists', width: 20 },
-      { header: 'Directorio', key: 'directory', width: 30 }
+      { header: 'Directorio', key: 'directory', width: 30 },
     ];
 
     const addNodeToSheet = (node: TreeNode, level: number = 0) => {
@@ -959,10 +1148,10 @@ export class ScraperService {
         chImages: node.chImagesFound || 0,
         dropdownRels: node.dropdownRelsProcessed || 0,
         lists: node.detectedLists?.length || 0,
-        directory: node.scrapedData?.pageDirectory || ''
+        directory: node.scrapedData?.pageDirectory || '',
       });
 
-      node.children.forEach(child => {
+      node.children.forEach((child) => {
         addNodeToSheet(child, level + 1);
       });
     };
@@ -991,7 +1180,7 @@ export class ScraperService {
       { header: 'Directorio de Página', key: 'pageDirectory', width: 30 },
       { header: 'Párrafos Principales', key: 'paragraphs', width: 60 },
       { header: 'Listados Detectados', key: 'listCount', width: 15 },
-      { header: 'Error', key: 'error', width: 30 }
+      { header: 'Error', key: 'error', width: 30 },
     ];
 
     // Pestaña 3: Listados detectados
@@ -1003,11 +1192,11 @@ export class ScraperService {
       { header: 'Número de Items', key: 'itemCount', width: 15 },
       { header: 'Tiene Sublistas', key: 'hasNested', width: 15 },
       { header: 'Items (Primeros 5)', key: 'items', width: 80 },
-      { header: 'Enlaces en Lista', key: 'listLinks', width: 60 }
+      { header: 'Enlaces en Lista', key: 'listLinks', width: 60 },
     ];
 
     // Agregar datos detallados
-    treeNodes.forEach(node => {
+    treeNodes.forEach((node) => {
       if (node.scrapedData) {
         const data = node.scrapedData;
         detailSheet.addRow({
@@ -1026,7 +1215,7 @@ export class ScraperService {
           pageDirectory: data.pageDirectory || '',
           paragraphs: data.paragraphs?.slice(0, 2).join(' | ') || '',
           listCount: data.listCount || 0,
-          error: data.error || ''
+          error: data.error || '',
         });
 
         // Agregar información de listados
@@ -1042,8 +1231,11 @@ export class ScraperService {
               listType: list.type,
               itemCount: list.itemCount,
               hasNested: list.hasNestedLists ? 'Sí' : 'No',
-              items: list.items.slice(0, 5).map((item: any) => item.text).join(' | '),
-              listLinks: listLinks
+              items: list.items
+                .slice(0, 5)
+                .map((item: any) => item.text)
+                .join(' | '),
+              listLinks: listLinks,
             });
           });
         }
@@ -1051,7 +1243,7 @@ export class ScraperService {
     });
 
     // Aplicar estilos
-    [treeSheet, detailSheet, listsSheet].forEach(sheet => {
+    [treeSheet, detailSheet, listsSheet].forEach((sheet) => {
       sheet.getRow(1).font = { bold: true };
 
       sheet.eachRow((row, rowNumber) => {
@@ -1059,7 +1251,7 @@ export class ScraperService {
           row.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FFF0F0F0' }
+            fgColor: { argb: 'FFF0F0F0' },
           };
         }
       });
